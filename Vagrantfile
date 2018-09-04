@@ -1,14 +1,16 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-Vagrant.configure("4") do |config|
+Vagrant.configure("2") do |config|
   config.vm.box = "bento/centos-7.5"
 
   # auto up all
   config.vm.define "k8s_master"
   config.vm.define "k8s_node1"
   config.vm.define "k8s_node2"
-  config.vm.define "k8s_vagrant", autostart: false
+  config.vm.define "k8s_ansible", autostart: false
+
+  config.vm.network "public_network"
 
   config.vm.provider "k8s_master" do |k8s_master|
     k8s_master.hostname = "k8s_master"
@@ -105,6 +107,6 @@ Vagrant.configure("4") do |config|
   
   config.vm.provision "shell", inline: <<-SHELL
     yum update
-    yum install vim
+    yum install -y vim
   SHELL
 end
