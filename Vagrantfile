@@ -1,112 +1,102 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-Vagrant.configure("2") do |config|
+Vagrant.configure(2) do |config|
   config.vm.box = "bento/centos-7.5"
 
-  # auto up all
-  config.vm.define "k8s_master"
-  config.vm.define "k8s_node1"
-  config.vm.define "k8s_node2"
-  config.vm.define "k8s_ansible", autostart: false
-
-  config.vm.network "public_network"
-
-  config.vm.provider "k8s_master" do |k8s_master|
-    k8s_master.hostname = "k8s_master"
-    k8s_master.name = "k8s_master"
-    k8s_master.gui = true
-    k8s_master.memory = "4096"
-    k8s_master.cpus = "3"
-
-    # vm management network
-    k8s_master.vm.network "private_network", ip: "192.168.33.5", virtualbox__intnet: "k8s_vm_management_network"
-
-    k8s_master.customize [
-      "modifyvm", :id,
-      "--hwvirtex", "on",
-      "--nestedpaging", "on",
-      "--largepages", "on",
-      "--ioapic", "on",
-      "--pae", "on",
-      "--paravirtprovider", "kvm",
-    ]
-
-  end
-
-  config.vm.provider "k8s_node1" do |k8s_node1|
-    k8s_node1.hostname = "k8s_node1"
-    k8s_node1.name = "k8s_node1"
-    k8s_node1.gui = true
-    k8s_node1.memory = "4096"
-    k8s_node1.cpus = "3"
-
-    k8s_node1.vm.network "private_network", ip: "192.168.33.5", virtualbox__intnet: "k8s_vm_management_network"
-
-    k8s_node1.customize [
-      "modifyvm", :id,
-      "--hwvirtex", "on",
-      "--nestedpaging", "on",
-      "--largepages", "on",
-      "--ioapic", "on",
-      "--pae", "on",
-      "--paravirtprovider", "kvm",
-    ]
-
-  end
-
- config.vm.provider "k8s_node2" do |k8s_node2|
-    k8s_node2.hostname = "k8s_node2"
-    k8s_node2.name = "k8s_node2"
-    k8s_node2.gui = true
-    k8s_node2.memory = "4096"
-    k8s_node2.cpus = "3"
-
-    k8s_node2.vm.network "private_network", ip: "192.168.33.5", virtualbox__intnet: "k8s_vm_management_network"
-
-    k8s_node2.customize [
-      "modifyvm", :id,
-      "--hwvirtex", "on",
-      "--nestedpaging", "on",
-      "--largepages", "on",
-      "--ioapic", "on",
-      "--pae", "on",
-      "--paravirtprovider", "kvm",
-    ]
-
-  end  
+  # 1台目管理マシン（マシン名：master）
+  config.vm.define "master" do |atomic|
+    atomic.vm.hostname = "master.k8s"
+    atomic.vm.network :forwarded_port, id: "ssh", guest: 22, host: 2222
+    atomic.vm.network "private_network", ip: "192.168.33.100", virtualbox__intnet: "k8s_hostnet"
+    atomic.vm.network "public_network"
   
- config.vm.provider "k8s_ansible" do |k8s_ansible|
-    k8s_ansible.hostname = "k8s_ansible"
-    k8s_ansible.name = "k8s_ansible"
-    k8s_ansible.gui = true
-    k8s_ansible.memory = "4096"
-    k8s_ansible.cpus = "3"
+    atomic.vm.provider "virtualbox" do |box|
+      box.gui = false
+      box.memory = "4096"
+      box.cpus = "3"
 
-    k8s_ansible.vm.network "private_network", ip: "192.168.33.5", virtualbox__intnet: "k8s_vm_management_network"
+      box.customize [
+        "modifyvm", :id,
+        "--hwvirtex", "on",
+        "--nestedpaging", "on",
+        "--largepages", "on",
+        "--ioapic", "on",
+        "--pae", "on",
+        "--paravirtprovider", "kvm",
+      ]
+    end
+  end
 
-    k8s_ansible.customize [
-      "modifyvm", :id,
-      "--hwvirtex", "on",
-      "--nestedpaging", "on",
-      "--largepages", "on",
-      "--ioapic", "on",
-      "--pae", "on",
-      "--paravirtprovider", "kvm",
-    ]
+  # 2台目 コンテナホスト（マシン名：node01）
+  config.vm.define "node01" do |atomic|
+    atomic.vm.hostname = "node01.k8s"
+    atomic.vm.network :forwarded_port, id: "ssh", guest: 22, host: 2223
+    atomic.vm.network "private_network", ip: "192.168.33.101", virtualbox__intnet: "k8s_hostnet"
+    atomic.vm.network "public_network"
+ 
+    atomic.vm.provider "virtualbox" do |box|
+      box.gui = false
+      box.memory = "4096"
+      box.cpus = "3"
 
-    k8s_ansible.vm.provision "shell", inline: <<-SHELL
-      yum update
-      yum install -y epel-release
-      yum install -y ansible
-      yum install -y https://centos7.iuscommunity.org/ius-release.rpm
-      yum install -y python36u python36u-libs python36u-devel python36u-pip
-    SHELL
-
+       box.customize [
+        "modifyvm", :id,
+        "--hwvirtex", "on",
+        "--nestedpaging", "on",
+        "--largepages", "on",
+        "--ioapic", "on",
+        "--pae", "on",
+        "--paravirtprovider", "kvm",
+      ]
+    end
   end
   
-  config.vm.provision "shell", inline: <<-SHELL
-    yum update
-    yum install -y vim
-  SHELL
+  # 3台目 コンテナホスト（マシン名：node02）
+  config.vm.define "node02" do |atomic|
+    atomic.vm.hostname = "node02.k8s"
+    atomic.vm.network :forwarded_port, id: "ssh", guest: 22, host: 2224
+    atomic.vm.network "private_network", ip: "192.168.33.102", virtualbox__intnet: "k8s_hostnet"
+    atomic.vm.network "public_network"
+  
+    atomic.vm.provider "virtualbox" do |box|
+      box.gui = false
+      box.memory = "4096"
+      box.cpus = "3"
+
+      box.customize [
+        "modifyvm", :id,
+        "--hwvirtex", "on",
+        "--nestedpaging", "on",
+        "--largepages", "on",
+        "--ioapic", "on",
+        "--pae", "on",
+        "--paravirtprovider", "kvm",
+      ]
+    end
+  end
+  
+  # ansible コンテナホスト（マシン名：ansible）
+  config.vm.define "ansible" do |atomic|
+    atomic.vm.hostname = "ansible.k8s"
+    atomic.vm.network :forwarded_port, id: "ssh", guest: 22, host: 2225
+    atomic.vm.network "private_network", ip: "192.168.33.103", virtualbox__intnet: "k8s_hostnet"
+    atomic.vm.network "public_network"
+  
+    atomic.vm.provider "virtualbox" do |box|
+      box.gui = false
+      box.memory = "4096"
+      box.cpus = "3"
+
+      box.customize [
+        "modifyvm", :id,
+        "--hwvirtex", "on",
+        "--nestedpaging", "on",
+        "--largepages", "on",
+        "--ioapic", "on",
+        "--pae", "on",
+        "--paravirtprovider", "kvm",
+      ]
+    end
+  end
 end
